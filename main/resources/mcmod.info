@@ -1,0 +1,16 @@
+[
+{
+  "modid": "healthbar",
+  "name": "Health Bar",
+  "description": "Code From TUKMC, https://github.com/maxpowa/tukmc",
+  "version": "1.5",
+  "mcversion": "1.8.X",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["maxpowa", "connection_lost"],
+  "credits": "Thanks to maxpowa for the code",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]
