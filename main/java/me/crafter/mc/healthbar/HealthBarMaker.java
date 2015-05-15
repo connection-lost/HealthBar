@@ -3,6 +3,7 @@ package me.crafter.mc.healthbar;
 import java.awt.Color;
 import java.math.BigDecimal;
 import java.math.MathContext;
+import java.math.RoundingMode;
 import java.util.List;
 
 import org.apache.commons.lang3.StringEscapeUtils;
@@ -15,6 +16,7 @@ import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.item.EntityArmorStand;
 import net.minecraft.util.Vec3;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent.Chat;
@@ -61,6 +63,7 @@ public class HealthBarMaker {
 		for (Entity entity : loadedEntities) {// entity.isInRangeToRenderVec3D(renderingVector) &&
 			if (entity != null
 					&& entity instanceof EntityLivingBase
+					&& !(entity instanceof EntityArmorStand)
 //					&& (entity.ignoreFrustumCheck
 //							// || frustrum.isBoundingBoxInFrustum(entity.getBoundingBox())
 //					)
@@ -85,13 +88,15 @@ public class HealthBarMaker {
 				* partialTicks;
 		float scale = barscale/1000;
 		
-		//MAYBE optimize the following two lines
-		float maxHealth = new BigDecimal(entity.getMaxHealth()).round(
-				new MathContext(2)).floatValue();
-		float health = new BigDecimal(entity.getHealth()).round(
-				new MathContext(2)).floatValue();
+		int alpha = 255;
 		
-		if (maxHealth > 1000) return;
+		if (distance > 5){
+			alpha = (int) (255 * (visibledistance - distance) / (visibledistance - 5));
+		}
+		
+		//MAYBE optimize the following two lines
+		float maxHealth = new BigDecimal(entity.getMaxHealth()).setScale(1, RoundingMode.CEILING).floatValue();
+		float health = new BigDecimal(entity.getHealth()).setScale(1, RoundingMode.CEILING).floatValue();
 		
 		String lable = "";
 		
@@ -127,7 +132,7 @@ public class HealthBarMaker {
 		if (!lable.equals("")) {
 			renderLabel(entity, lable, (float) (x - renderManager.viewerPosX),
 					(float) (y - renderManager.viewerPosY + entity.height + 1),
-					(float) (z - renderManager.viewerPosZ), visibledistance);
+					(float) (z - renderManager.viewerPosZ));
 		}
 
 		GL11.glPushMatrix();
@@ -137,7 +142,7 @@ public class HealthBarMaker {
 		GL11.glRotatef(-renderManager.playerViewY, 0.0F, 1.0F, 0.0F);
 		GL11.glRotatef(renderManager.playerViewX, 1.0F, 0.0F, 0.0F);
 		GL11.glScalef(-scale, -scale, scale);
-		GL11.glDisable(GL11.GL_LIGHTING);
+		//GL11.glDisable(GL11.GL_LIGHTING);
 		GL11.glDepthMask(false);
 		GL11.glDisable(GL11.GL_DEPTH_TEST);
 		GL11.glDisable(GL11.GL_TEXTURE_2D);
@@ -159,11 +164,16 @@ public class HealthBarMaker {
 		
 		//Health Bar outline
 		//x y z width height color1 color2
-		drawDoubleOutlinedBox(-(int) maxHealth / 2, -1, 3, (int) maxHealth, 2, innerframe2, outerframe);		
+		
+		if (maxHealth > 100){
+			health = (health / maxHealth) * 100F;
+			maxHealth = 100;
+		}
+		
+		drawDoubleOutlinedBox(-(int) maxHealth / 2, -1, 3, (int) maxHealth, 2, innerframe2, outerframe, alpha);		
 		//float fade = 0.6F
 		//fade black health bar
-		drawSolidGradientRect(-(int) maxHealth + (maxHealth % 2 == 1 ? 1 : 0), -2, 3, (int) health * 2, 4, 
-				(int)(coloractual*0.6F), coloractual);
+		drawSolidGradientRect(-(int) maxHealth + (maxHealth % 2 == 1 ? 1 : 0), -2, 3, (int) health * 2, 4, (int)(coloractual*0.6F), coloractual, alpha);
 		
 		//oni red health bar
 		//drawSolidGradientRect(-(int) maxHealth + (maxHealth % 2 == 1 ? 1 : 0), -2, 3, (int) health * 2, 4, 
@@ -179,25 +189,23 @@ public class HealthBarMaker {
 
 	public void drawDoubleOutlinedBox(final int x, final int y, final int z,
 			final int width, final int height, final int color,
-			final int outlineColor) {
+			final int outlineColor, final int alpha) {
 		drawDoubleOutlinedBox(x, y, z, width, height, color, outlineColor,
-				color);
+				color, alpha);
 	}
 
 	public void drawDoubleOutlinedBox(final int x, final int y, final int z,
 			final int width, final int height, final int color,
-			final int outlineColor, final int outline2Color) {
-		drawSolidRect(x * 2 - 2, y * 2 - 2, z, (x + width) * 2 + 2,
-				(y + height) * 2 + 2, color);
-		drawSolidRect(x * 2 - 1, y * 2 - 1, z, (x + width) * 2 + 1,
-				(y + height) * 2 + 1, outlineColor);
-		drawSolidRect(x * 2, y * 2, z, (x + width) * 2, (y + height) * 2,
-				outline2Color);
+			final int outlineColor, final int outline2Color, final int alpha) {
+		
+		//TODO finish this
+		
+		drawNonSolidRect(x * 2 - 2, y * 2 - 2, z, (x + width) * 2 + 2, (y + height) * 2 + 2, color, alpha);
+		drawNonSolidRect(x * 2 - 1, y * 2 - 1, z, (x + width) * 2 + 1,	(y + height) * 2 + 1, outlineColor, alpha);
+		//drawSolidRect(x * 2, y * 2, z, (x + width) * 2, (y + height) * 2, outline2Color);
 	}
 
-	public void drawSolidRect(final int vertex1, final int vertex2,
-			final int zLevel, final int vertex3, final int vertex4,
-			final int color) {
+	public void drawSolidRect(final int vertex1, final int vertex2, final int zLevel, final int vertex3, final int vertex4,	final int color) {
 		GL11.glPushMatrix();
 		final Color color1 = new Color(color);
 		final Tessellator tess = Tessellator.getInstance();
@@ -212,61 +220,99 @@ public class HealthBarMaker {
 		GL11.glEnable(GL11.GL_TEXTURE_2D);
 		GL11.glPopMatrix();
 	}
+	
+	public void drawNonSolidRect(final int vertex1, final int vertex2, final int zLevel, final int vertex3, final int vertex4, final int color, final int alpha) {
+		int thick = 1;
+		
+		GL11.glPushMatrix();
+		final Color color1 = new Color(color);
+		final Tessellator tess = Tessellator.getInstance();
+		GL11.glDisable(GL11.GL_ALPHA_TEST);
+		GL11.glDisable(GL11.GL_TEXTURE_2D);
+		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+		GL11.glEnable(GL11.GL_BLEND);
+
+		tess.getWorldRenderer().startDrawingQuads();
+		tess.getWorldRenderer().setColorRGBA_I(color, alpha);
+
+		tess.getWorldRenderer().addVertex(vertex1, vertex2, zLevel);
+		tess.getWorldRenderer().addVertex(vertex1, vertex4, zLevel);
+		tess.getWorldRenderer().addVertex(vertex1 + thick, vertex4, zLevel);
+		tess.getWorldRenderer().addVertex(vertex1 + thick, vertex2, zLevel);
+
+		tess.getWorldRenderer().addVertex(vertex3 - thick, vertex4, zLevel);
+		tess.getWorldRenderer().addVertex(vertex3, vertex4, zLevel);
+		tess.getWorldRenderer().addVertex(vertex3, vertex2, zLevel);
+		tess.getWorldRenderer().addVertex(vertex3 - thick, vertex2, zLevel);
+		
+		tess.getWorldRenderer().addVertex(vertex1 + thick, vertex4, zLevel);
+		tess.getWorldRenderer().addVertex(vertex3 - thick, vertex4, zLevel);
+		tess.getWorldRenderer().addVertex(vertex3 - thick, vertex4 - thick, zLevel);
+		tess.getWorldRenderer().addVertex(vertex1 + thick, vertex4 - thick, zLevel);
+
+		tess.getWorldRenderer().addVertex(vertex1 + thick, vertex2 + thick, zLevel);
+		tess.getWorldRenderer().addVertex(vertex3 - thick, vertex2 + thick, zLevel);
+		tess.getWorldRenderer().addVertex(vertex3 - thick, vertex2, zLevel);
+		tess.getWorldRenderer().addVertex(vertex1 + thick, vertex2, zLevel);
+		
+		tess.draw();
+		
+		GL11.glDisable(GL11.GL_BLEND);
+		GL11.glEnable(GL11.GL_TEXTURE_2D);
+		GL11.glEnable(GL11.GL_ALPHA_TEST);
+		GL11.glPopMatrix();
+	}
 
 	public static void renderLabel(EntityLivingBase entity,
-			String label, double xpos, double ypos, double zpos, int visibledistance) {
+			String label, double xpos, double ypos, double zpos) {
 
 		RenderManager renderManager = mc.getRenderManager();
 		if (renderManager.livingPlayer == null || entity == null)
 			return;
 		double distance = entity.getDistanceSqToEntity(renderManager.livingPlayer);
-		//TODO check if next line "if..." is not needed
-		if (distance <= visibledistance * visibledistance) {
-			FontRenderer fontRenderer = mc.fontRendererObj;
-			float scaletemp = 1.6F;
-			float scale = 0.016666668F * scaletemp;
-			GL11.glPushMatrix();
-			GL11.glTranslatef((float) xpos, (float) ypos, (float) zpos);
-			GL11.glNormal3f(0.0F, 1.0F, 0.0F);
-			GL11.glRotatef(-renderManager.playerViewY, 0.0F, 1.0F, 0.0F);
-			GL11.glRotatef(renderManager.playerViewX, 1.0F, 0.0F, 0.0F);
-			GL11.glScalef(-scale, -scale, scale);
-			GL11.glDisable(GL11.GL_LIGHTING);
-			GL11.glDepthMask(false);
-			GL11.glDisable(GL11.GL_DEPTH_TEST);
-			GL11.glEnable(GL11.GL_BLEND);
-			GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-			Tessellator tessellator = Tessellator.getInstance();
-			byte bytezero = 0;
-			GL11.glDisable(GL11.GL_TEXTURE_2D);
-			tessellator.getWorldRenderer().startDrawingQuads();
-			int halfstringwidth = fontRenderer.getStringWidth(label) / 2;
-			tessellator.getWorldRenderer().setColorRGBA_F(0.0F, 0.0F, 0.0F, 0.25F);
-			tessellator.getWorldRenderer().addVertex(-halfstringwidth - 1, -1 + bytezero, 0.0D);
-			tessellator.getWorldRenderer().addVertex(-halfstringwidth - 1, 8 + bytezero, 0.0D);
-			tessellator.getWorldRenderer().addVertex(halfstringwidth + 1, 8 + bytezero, 0.0D);
-			tessellator.getWorldRenderer().addVertex(halfstringwidth + 1, -1 + bytezero, 0.0D);
-			tessellator.draw();
-			GL11.glEnable(GL11.GL_TEXTURE_2D);
-			fontRenderer.drawString(label, -fontRenderer.getStringWidth(label) / 2,	bytezero, 553648127);
-			GL11.glEnable(GL11.GL_DEPTH_TEST);
-			GL11.glDepthMask(true);
-			fontRenderer.drawString(label, -fontRenderer.getStringWidth(label) / 2,	bytezero, -1);
-			GL11.glEnable(GL11.GL_LIGHTING);
-			GL11.glDisable(GL11.GL_BLEND);
-			GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
-			GL11.glPopMatrix();
-		}
+
+		FontRenderer fontRenderer = mc.fontRendererObj;
+		float scaletemp = 1.6F;
+		float scale = 0.016666668F * scaletemp;
+		GL11.glPushMatrix();
+		GL11.glTranslatef((float) xpos, (float) ypos, (float) zpos);
+		GL11.glNormal3f(0.0F, 1.0F, 0.0F);
+		GL11.glRotatef(-renderManager.playerViewY, 0.0F, 1.0F, 0.0F);
+		GL11.glRotatef(renderManager.playerViewX, 1.0F, 0.0F, 0.0F);
+		GL11.glScalef(-scale, -scale, scale);
+		//GL11.glDisable(GL11.GL_LIGHTING);
+		GL11.glDepthMask(false);
+		GL11.glDisable(GL11.GL_DEPTH_TEST);
+		GL11.glEnable(GL11.GL_BLEND);
+		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+		Tessellator tessellator = Tessellator.getInstance();
+		GL11.glDisable(GL11.GL_TEXTURE_2D);
+		tessellator.getWorldRenderer().startDrawingQuads();
+		int halfstringwidth = fontRenderer.getStringWidth(label) / 2;
+		tessellator.getWorldRenderer().setColorRGBA_F(0.0F, 0.0F, 0.0F, 0.25F);
+		tessellator.getWorldRenderer().addVertex(-halfstringwidth - 1, -1, 0.0D);
+		tessellator.getWorldRenderer().addVertex(-halfstringwidth - 1, 8, 0.0D);
+		tessellator.getWorldRenderer().addVertex(halfstringwidth + 1, 8, 0.0D);
+		tessellator.getWorldRenderer().addVertex(halfstringwidth + 1, -1, 0.0D);
+		tessellator.draw();
+		GL11.glEnable(GL11.GL_TEXTURE_2D);
+		fontRenderer.drawString(label, -fontRenderer.getStringWidth(label) / 2,	0, 553648127);
+		GL11.glEnable(GL11.GL_DEPTH_TEST);
+		GL11.glDepthMask(true);
+		fontRenderer.drawString(label, -fontRenderer.getStringWidth(label) / 2,	0, -1);
+		//GL11.glEnable(GL11.GL_LIGHTING);
+		GL11.glDisable(GL11.GL_BLEND);
+		GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+		GL11.glPopMatrix();
+
 	}
 
 	public void drawSolidGradientRect(final int x, final int y, final int z, final int width, 
-			final int height, final int color1, final int color2) {
-		drawSolidGradientRect0(x, y, (x + width), (y + height), color1, color2, z);
+			final int height, final int color1, final int color2, final int alpha) {
+		drawSolidGradientRect0(x, y, (x + width), (y + height), color1, color2, z, alpha);
 	}
 
-	public void drawSolidGradientRect0(final int x1, final int y1,
-			final int x2, final int y2, final int color1,
-			final int color2, final int z) {
+	public void drawSolidGradientRect0(final int x1, final int y1, final int x2, final int y2, final int color1, final int color2, final int z, final int alpha) {
 		GL11.glPushMatrix();
 		final Color color1Color = new Color(color1);
 		final Color color2Color = new Color(color2);
@@ -274,16 +320,23 @@ public class HealthBarMaker {
 		GL11.glDisable(GL11.GL_ALPHA_TEST);
 		GL11.glShadeModel(GL11.GL_SMOOTH);
 		final Tessellator tess = Tessellator.getInstance();
+
+		GL11.glEnable(GL11.GL_DEPTH_TEST);
+		GL11.glDepthMask(false);
+		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+		GL11.glEnable(GL11.GL_BLEND);
+		
 		tess.getWorldRenderer().startDrawingQuads();
-		tess.getWorldRenderer().setColorOpaque(color1Color.getRed(), color1Color.getGreen(),
-				color1Color.getBlue());
+		tess.getWorldRenderer().setColorOpaque(color1Color.getRed(), color1Color.getGreen(), color1Color.getBlue());
+		tess.getWorldRenderer().setColorRGBA_I(color1, alpha);
 		tess.getWorldRenderer().addVertex(x1, y2, z);
 		tess.getWorldRenderer().addVertex(x2, y2, z);
-		tess.getWorldRenderer().setColorOpaque(color2Color.getRed(), color2Color.getGreen(),
-				color2Color.getBlue());
+		tess.getWorldRenderer().setColorOpaque(color2Color.getRed(), color2Color.getGreen(), color2Color.getBlue());
+		tess.getWorldRenderer().setColorRGBA_I(color2, alpha);
 		tess.getWorldRenderer().addVertex(x2, y1, z);
 		tess.getWorldRenderer().addVertex(x1, y1, z);
 		tess.draw();
+		
 		GL11.glShadeModel(GL11.GL_FLAT);
 		GL11.glEnable(GL11.GL_ALPHA_TEST);
 		GL11.glEnable(GL11.GL_TEXTURE_2D);

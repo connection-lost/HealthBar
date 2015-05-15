@@ -15,7 +15,7 @@ public class HealthBar {
 		public static HealthBar instance;
 		
 	    public static final String MODID = "healthbar";
-	    public static final String VERSION = "1.5";
+	    public static final String VERSION = "1.6";
 	    
 	    @Mod.EventHandler
 	    public void init(FMLInitializationEvent event)
